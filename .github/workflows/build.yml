@@ -1,0 +1,48 @@
+name: Build PandoraKERNEL
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison flex libssl-dev ccache build-essential clang libncurses5-dev libncursesw5-dev git wget curl zip unzip python3
+
+    - name: Clone AnyKernel3
+      run: |
+        git clone https://github.com/osm0sis/AnyKernel3.git
+
+    - name: Build Kernel
+      run: |
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export KBUILD_BUILD_USER=PANđøʀᴀ
+        export KBUILD_BUILD_HOST=GitHub-Actions
+        export CLANG_PATH=$(pwd)/clang
+        export PATH=$CLANG_PATH/bin:$PATH
+
+        git clone --depth=1 https://github.com/Neutron-Toolchains/clang-r498229 clang
+
+        mkdir -p out
+        make O=out gki_defconfig
+        make -j$(nproc) O=out
+
+    - name: Pack to AnyKernel
+      run: |
+        cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+        cd AnyKernel3
+        zip -r9 PandoraKERNEL.zip *
+
+    - name: Upload kernel zip
+      uses: actions/upload-artifact@v3
+      with:
+        name: PandoraKERNEL
+        path: AnyKernel3/PandoraKERNEL.zip
