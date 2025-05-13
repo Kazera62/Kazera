@@ -14,10 +14,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y \
-          bc bison flex libssl-dev ccache build-essential \
-          clang libncurses5-dev libncursesw5-dev git wget \
-          curl zip unzip python3
+        sudo apt install -y bc bison flex libssl-dev ccache build-essential clang libncurses5-dev libncursesw5-dev git wget curl zip unzip python3
 
     - name: Clone AnyKernel3
       run: |
@@ -36,6 +33,9 @@ jobs:
         export CLANG_PATH=$(pwd)/clang
         export PATH=$CLANG_PATH/bin:$PATH
 
+        chmod +x scripts/*
+        chmod +x scripts/*/* || true
+
         mkdir -p out
         make O=out gki_defconfig
         make -j$(nproc) O=out \
@@ -44,14 +44,14 @@ jobs:
           CROSS_COMPILE_COMPAT=$CLANG_PATH/bin/arm-linux-gnueabi- \
           LD=ld.lld
 
-    - name: Pack to AnyKernel3
+    - name: Pack to AnyKernel
       run: |
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
         cd AnyKernel3
         zip -r9 PandoraKERNEL.zip *
 
     - name: Upload kernel zip
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: PandoraKERNEL
         path: AnyKernel3/PandoraKERNEL.zip
