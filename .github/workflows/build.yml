@@ -14,7 +14,11 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y bc bison flex libssl-dev ccache build-essential clang libncurses5-dev libncursesw5-dev git wget curl zip unzip python3
+        sudo apt install -y software-properties-common
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt update
+        sudo apt install -y bc bison flex libssl-dev ccache build-essential \
+          clang lld libncurses5-dev libncursesw5-dev git wget curl zip unzip python3
 
     - name: Clone AnyKernel3
       run: |
@@ -40,9 +44,9 @@ jobs:
         make O=out gki_defconfig
         make -j$(nproc) O=out \
           CC=clang \
+          LD=$CLANG_PATH/bin/ld.lld \
           CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- \
-          CROSS_COMPILE_COMPAT=$CLANG_PATH/bin/arm-linux-gnueabi- \
-          LD=ld.lld
+          CROSS_COMPILE_COMPAT=$CLANG_PATH/bin/arm-linux-gnueabi-
 
     - name: Pack to AnyKernel
       run: |
