@@ -42,7 +42,7 @@ jobs:
         zip -r9 PandoraKERNEL.zip *
 
     - name: Upload kernel zip
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: PandoraKERNEL
         path: AnyKernel3/PandoraKERNEL.zip
