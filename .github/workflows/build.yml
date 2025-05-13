@@ -1,57 +1,49 @@
-name: Build PandoraKERNEL
+name: PandoraKERNEL - GKI Build
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build PandoraKERNEL
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v3
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        sudo apt update
-        sudo apt install -y \
-          bc bison flex libssl-dev ccache build-essential \
-          clang lld libncurses5-dev libncursesw5-dev git wget curl zip unzip python3
+      - name: Set up Clang
+        uses: rickstaa/action-install-gh-release@v1
+        with:
+          repo: ClangBuiltLinux/llvm-project
+          tag: llvmorg-17.0.6
+          files: |
+            clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-20.04.tar.xz
 
-    - name: Clone AnyKernel3
-      run: |
-        git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git
+      - name: Extract Clang
+        run: |
+          mkdir clang
+          tar -xf clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-20.04.tar.xz -C clang --strip-components=1
 
-    - name: Build Kernel
-      run: |
-        export ARCH=arm64
-        export SUBARCH=arm64
-        export KBUILD_BUILD_USER=PANđøʀᴀ
-        export KBUILD_BUILD_HOST=GitHub-Actions
+      - name: Build PandoraKERNEL
+        run: |
+          export PATH=$PWD/clang/bin:$PATH
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          make O=out ARCH=arm64 gki_defconfig
+          make -j$(nproc) O=out ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 
-        # FIX permission .sh
-        chmod +x scripts/*.sh || true
-        chmod +x scripts/*/*.sh || true
+      - name: Pack with AnyKernel3
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3.git
+          cp out/arch/arm64/boot/Image.gz AnyKernel3/
+          cd AnyKernel3
+          zip -r9 PandoraKERNEL-GKI.zip *
 
-        mkdir -p out
-        make O=out gki_defconfig
-        make -j$(nproc) O=out \
-          CC=clang \
-          LD=ld.lld \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
-
-    - name: Pack to AnyKernel
-      run: |
-        cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
-        cd AnyKernel3
-        zip -r9 PandoraKERNEL.zip *
-
-    - name: Upload kernel zip
-      uses: actions/upload-artifact@v4
-      with:
-        name: PandoraKERNEL
-        path: AnyKernel3/PandoraKERNEL.zip
+      - name: Upload Kernel Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: PandoraKERNEL-GKI
+          path: AnyKernel3/PandoraKERNEL-GKI.zip
