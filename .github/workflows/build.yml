@@ -32,6 +32,10 @@ jobs:
         export KBUILD_BUILD_USER=PANđøʀᴀ
         export KBUILD_BUILD_HOST=GitHub-Actions
 
+        # FIX permission .sh
+        chmod +x scripts/*.sh || true
+        chmod +x scripts/*/*.sh || true
+
         mkdir -p out
         make O=out gki_defconfig
         make -j$(nproc) O=out \
