@@ -8,56 +8,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Kernel Source
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 1
+      - name: Checkout source
+        uses: actions/checkout@v3
 
-    - name: Set up Clang
-      run: |
-        git clone --depth=1 https://github.com/ZyCromerZ/Clang --branch 18 ~/clang
-        echo "CLANG_PATH=$HOME/clang" >> $GITHUB_ENV
+      - name: Set up Clang
+        run: |
+          git clone --depth=1 https://github.com/ZyCromerZ/Clang --branch 17-stable ~/clang
+          echo "CLANG_PATH=$HOME/clang" >> $GITHUB_ENV
 
-    - name: Setup Environment Variables
-      run: |
-        echo "KERNEL_NAME=PandoraKERNEL" >> $GITHUB_ENV
-        echo "DEFCONFIG=defconfig" >> $GITHUB_ENV
-        echo "ARCH=arm64" >> $GITHUB_ENV
-        echo "SUBARCH=arm64" >> $GITHUB_ENV
-        echo "KBUILD_BUILD_USER=PANđøʀᴀ" >> $GITHUB_ENV
-        echo "KBUILD_BUILD_HOST=GitHub-Action" >> $GITHUB_ENV
-        echo "CLANG_TRIPLE=aarch64-linux-gnu-" >> $GITHUB_ENV
-        echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+      - name: Build Kernel
+        run: |
+          export CLANG_PATH=$HOME/clang
+          export PATH="$CLANG_PATH/bin:$PATH"
+          make O=out ARCH=arm64 defconfig
+          make -j$(nproc) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 
-    - name: Make Defconfig
-      run: |
-        make O=out ARCH=$ARCH $DEFCONFIG
+      - name: Clone AnyKernel3
+        run: |
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git
 
-    - name: Compile Kernel
-      run: |
-        make -j$(nproc) O=out \
-          ARCH=$ARCH \
-          CC=$CLANG_PATH/bin/clang \
-          CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- \
-          CLANG_TRIPLE=aarch64-linux-gnu- \
-          LLVM=1 \
-          LLVM_IAS=1
+      - name: Copy zImage to AnyKernel3
+        run: |
+          cp out/arch/arm64/boot/Image.gz AnyKernel3/
 
-    - name: Clone AnyKernel3
-      run: |
-        git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git anykernel
+      - name: Zip Kernel
+        run: |
+          cd AnyKernel3
+          zip -r9 PandoraKERNEL.zip ./*
 
-    - name: Move zImage or Image.gz-dtb to AnyKernel3
-      run: |
-        cp out/arch/arm64/boot/Image* anykernel/
-
-    - name: Zip Kernel
-      run: |
-        cd anykernel
-        zip -r9 PandoraKERNEL.zip * -x .git README.md
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: PandoraKERNEL
-        path: anykernel/PandoraKERNEL.zip
+      - name: Upload Flashable Zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: PandoraKERNEL_Flashable
+          path: AnyKernel3/PandoraKERNEL.zip
