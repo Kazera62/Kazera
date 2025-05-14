@@ -13,7 +13,8 @@ jobs:
 
       - name: Set up Clang
         run: |
-          git clone --depth=1 https://github.com/ZyCromerZ/Clang --branch 17-stable ~/clang
+          git clone - name: Install Clang
+  uses: egor-tensin/setup-clang@v1.4
           echo "CLANG_PATH=$HOME/clang" >> $GITHUB_ENV
 
       - name: Build Kernel
